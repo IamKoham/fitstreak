@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Streak</title>
+<style>
+:root{--bg:#f6f6f4;--outer:#e9e9ec;--card:#fff;--ink:#111;--onink:#fff;--muted:#777783;--line:#e8e8ea;--lime:#c5f02c;--onlime:#111;--blue:#3b6bff;--sky:#e7eeff;--skyink:#2447c8;--bar:#111;--warn:#fff3cf;--warnink:#6b5412;--err:#d33}
+@media (prefers-color-scheme:dark){:root{--bg:#0c0c0e;--outer:#000;--card:#18181b;--ink:#f4f4f5;--onink:#111;--muted:#9a9aa6;--line:#2b2b30;--sky:#1b2748;--skyink:#9db6ff;--bar:#c5f02c;--warn:#3a3114;--warnink:#f1dd9a}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--outer);color:var(--ink);display:flex;justify-content:center;-webkit-tap-highlight-color:transparent}
+#app{width:100%;max-width:420px;min-height:100vh;background:var(--bg);padding:22px 16px 0;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;font-size:14px;color:var(--muted);line-height:1.5}
+.card b{color:var(--ink)}
+.btn{border:0;background:var(--ink);color:var(--onink);border-radius:999px;padding:17px;text-align:center;font-size:16px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;transition:transform .08s}
+.btn:active{transform:scale(.98)}
+.btn.small{padding:9px 14px;font-size:13px;font-weight:600;background:transparent;color:var(--ink);border:1.5px solid var(--line);width:auto}
+.btn.small.sel{background:var(--ink);color:var(--onink);border-color:var(--ink)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{margin:2px 0 0;font-size:32px;font-weight:800;letter-spacing:-.8px;line-height:1.1}
+h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.4px}
+.sub{font-size:16px;color:var(--muted);margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--lime);color:var(--onlime);border-radius:999px;padding:7px 12px;font-size:14px;font-weight:800}
+.chip.ghost{background:transparent;border:1.5px solid var(--line);color:var(--muted);font-weight:600;font-size:12px;padding:5px 10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cap{font-size:13px;color:var(--muted)}
+.week{display:flex;gap:2px}
+.week .d{flex:1;text-align:center}
+.week .dn{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.05em}
+.week .c{width:38px;height:38px;margin:6px auto 4px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--ink)}
+.week .c.t{background:var(--ink);color:var(--onink)}
+.week .c.done{background:var(--lime);color:var(--onlime)}
+.week .c.fz{background:var(--sky);color:var(--skyink)}
+.week .dot{width:6px;height:6px;border-radius:50%;margin:0 auto;background:transparent}
+.week .dot.s{background:var(--lime);box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+.week .dot.w{background:var(--blue)}
+.work{position:relative;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px 16px 16px 22px;overflow:hidden}
+.work::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:var(--blue)}
+.work.s::before{background:var(--lime)}
+.work .t{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-top:4px}
+.work .m{font-size:14px;color:var(--muted);margin-top:8px;line-height:1.5}
+.check{position:absolute;right:14px;top:14px;width:30px;height:30px;border-radius:8px;background:var(--ink);color:var(--onink);display:flex;align-items:center;justify-content:center;font-size:16px}
+.notice{background:var(--warn);color:var(--warnink);border-radius:16px;padding:14px 16px;font-size:14px;line-height:1.5}
+.steps{padding-left:20px;margin:0;line-height:1.75;color:var(--ink)}
+.vid{aspect-ratio:16/9;background:#1b1b22;border-radius:20px;display:flex;align-items:center;justify-content:center;color:#cfcfda;font-size:13px;overflow:hidden}
+.vid iframe{width:100%;height:100%;border:0}
+input[type=text],select,input[type=date]{padding:11px 12px;border:1.5px solid var(--line);border-radius:14px;font-size:14px;background:var(--card);color:var(--ink);font-family:inherit}
+input[type=text]{width:100%}
+input[type=date]{min-width:0;flex:1}
+input:focus,select:focus{outline:none;border-color:var(--ink)}
+.back{background:none;border:0;font-size:14px;font-weight:700;color:var(--ink);cursor:pointer;padding:0;text-align:left;font-family:inherit}
+.link{font-size:12px;color:var(--muted);text-align:center;cursor:pointer;text-decoration:underline;padding:6px}
+.segs{display:flex;gap:4px;flex:1}
+.seg{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.seg.on{background:var(--ink)}
+.setrow{display:flex;gap:8px;align-items:center}
+.setdot{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted)}
+.setdot.on{background:var(--ink);border-color:var(--ink);color:var(--onink)}
+.setdot.done{background:var(--lime);border-color:var(--lime);color:var(--onlime)}
+.big-num{text-align:center;font-size:96px;font-weight:800;letter-spacing:-3px;line-height:1}
+.pbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--ink);transition:width 1s linear}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
+.tile .k{font-size:12px;color:var(--muted);font-weight:600}
+.tile .v{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-top:2px}
+.tile .dl{font-size:12px;font-weight:700;margin-left:6px}
+.up{color:#17a34a}.down{color:var(--muted)}
+.tabs{position:sticky;bottom:0;margin-top:auto;display:flex;background:var(--bg);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom,0px));margin-left:-16px;margin-right:-16px}
+.tab{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit}
+.tab svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tab.sel{color:var(--ink)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal .h{text-align:center;font-size:12px;font-weight:700;color:var(--muted)}
+.cal .day{min-height:54px;border:0;border-radius:14px;background:var(--card);padding:5px 2px;font-size:10px;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:inherit;border:1px solid var(--line)}
+.cal .day b{font-size:13px;color:var(--ink)}
+.cal .day.done{background:var(--lime);border-color:var(--lime);color:var(--onlime)}
+.cal .day.done b{color:var(--onlime)}
+.cal .day.trip{background:var(--sky);border-color:var(--sky);color:var(--skyink)}
+.cal .day.today{box-shadow:inset 0 0 0 2px var(--ink)}
+.cal .day.sel{box-shadow:inset 0 0 0 2px var(--blue)}
+.cal .blank{visibility:hidden}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const KEY = "streak-app-v2";
+const NAME = "Samruddhi";
+const FREEZES_PER_PERIOD = 2, PERIOD_DAYS = 14;
+
+const WARMUP = { id: "warmup", name: "Warm-up", sets: 1, reps: "3 min", rest: 0, steps: ["March in place for 1 minute", "Arm circles, 30 seconds each direction", "10 bodyweight squats", "10 hip hinges: hands on hips, push your hips back, then stand"], harder: "" };
+const COOLDOWN = { id: "cooldown", name: "Cool-down stretch", sets: 1, reps: "5 min", rest: 0, steps: ["Quad stretch: pull your heel to your glute, 30 seconds each side", "Hamstring stretch: heel forward, hinge at the hips, 30 seconds each side", "Hip and glute stretch: lie down, ankle on opposite knee, pull knee in, 30 seconds each side", "Chest stretch: clasp hands behind you and lift, 30 seconds", "Child's pose: sit back on your heels, arms long, 45 seconds"], harder: "" };
+const EX = {
+  squat: { id: "squat", name: "Goblet squat", sets: 3, reps: "12 reps", rest: 45, steps: ["Feet shoulder width apart", "Hold one dumbbell at your chest", "Sit back and down, chest tall", "Push through your heels to stand"], harder: "Lower for 3 seconds, or pause 2 seconds at the bottom" },
+  rdl: { id: "rdl", name: "Romanian deadlift", sets: 3, reps: "12 reps", rest: 45, steps: ["Dumbbells in front of your thighs, knees slightly bent", "Push your hips back, sliding weights down your shins", "Keep your back flat", "Squeeze your glutes to stand"], harder: "Lower for 3 seconds, or do it on one leg" },
+  row: { id: "row", name: "One-arm row", sets: 3, reps: "12 each side", rest: 45, steps: ["One hand and knee on a chair or sofa", "Back flat, dumbbell hanging down", "Pull your elbow toward your hip", "Lower slowly"], harder: "Pause 2 seconds at the top" },
+  pushup: { id: "pushup", name: "Incline push-up", sets: 3, reps: "8 to 10 reps", rest: 45, steps: ["Hands on a sofa or counter, a bit wider than shoulders", "Body in one straight line", "Lower your chest toward the edge", "Press back up"], harder: "Use a lower surface, then try knees on the floor" },
+  plank: { id: "plank", name: "Plank", sets: 3, reps: "20 to 30 sec", rest: 45, steps: ["Forearms on the floor, elbows under shoulders", "Body in one straight line", "Squeeze your belly and glutes", "Keep breathing"], harder: "Add 5 seconds each week" },
+  lunge: { id: "lunge", name: "Reverse lunge", sets: 3, reps: "10 each leg", rest: 45, steps: ["Dumbbells at your sides", "Step one foot back and lower your back knee", "Front knee stays over your ankle", "Push through your front heel to stand"], harder: "Lower for 3 seconds" },
+  sbridge: { id: "sbridge", name: "Single-leg glute bridge", sets: 3, reps: "10 each leg", rest: 45, steps: ["Lie on your back, one foot on the floor, other leg straight", "Lift your hips by squeezing your glutes", "Keep hips level", "Lower slowly"], harder: "Rest a dumbbell on your hips" },
+  press: { id: "press", name: "Overhead press", sets: 3, reps: "10 reps", rest: 45, steps: ["Stand with dumbbells at your shoulders", "Ribs down, belly tight", "Press straight up", "Lower with control"], harder: "Lower for 3 seconds" },
+  deadbug: { id: "deadbug", name: "Dead bug", sets: 3, reps: "8 each side", rest: 45, steps: ["Lie on your back, arms up, knees bent over hips", "Lower the opposite arm and leg slowly", "Keep your lower back pressed into the floor", "Switch sides"], harder: "Hold a dumbbell overhead" },
+  sideplank: { id: "sideplank", name: "Side plank", sets: 3, reps: "15 to 20 sec each side", rest: 45, steps: ["Lie on your side, forearm under your shoulder", "Lift your hips so your body is in a line", "Knees down if it's too hard", "Switch sides"], harder: "Straighten your legs" }
+};
+const WORKOUTS = {
+  walk30: { name: "Walk", kind: "walk", mins: 30, exercises: [] },
+  walk20: { name: "Easy walk", kind: "walk", mins: 20, exercises: [] },
+  strengthA: { name: "Strength A", kind: "strength", mins: 30, exercises: [WARMUP, EX.squat, EX.rdl, EX.row, EX.pushup, EX.plank, COOLDOWN] },
+  strengthB: { name: "Strength B", kind: "strength", mins: 30, exercises: [WARMUP, EX.lunge, EX.sbridge, EX.press, EX.deadbug, EX.sideplank, COOLDOWN] }
+};
+const STRENGTH_DAYS = { 3: { 1: "strengthA", 3: "strengthB", 5: "strengthA" }, 2: { 2: "strengthA", 5: "strengthB" } };
+const DEFAULT_VIDEOS = {
+  warmup: "https://www.youtube.com/watch?v=n_tdMZMamoE",
+  cooldown: "https://www.youtube.com/watch?v=SbURodJWeMM",
+  squat: "https://www.youtube.com/watch?v=9KzZD_n2r64",
+  rdl: "https://www.youtube.com/watch?v=5WxMW-Fu5KU",
+  row: "https://www.youtube.com/watch?v=nehAvSrfUOg",
+  pushup: "https://www.youtube.com/watch?v=jUI42dCuNqk",
+  plank: "https://www.youtube.com/watch?v=HAfPYPN60As",
+  lunge: "https://www.youtube.com/watch?v=MyqQRJ2lW7Q",
+  sbridge: "https://www.youtube.com/watch?v=nat5dN0Kuao",
+  press: "https://www.youtube.com/watch?v=seUCEgPsBtc",
+  deadbug: "https://www.youtube.com/watch?v=zAhEhk5gQUQ",
+  sideplank: "https://www.youtube.com/watch?v=5Kp0fIDgcUs"
+};
+const PACES = { easy: { label: "Easy, about 2.5 mph", met: 2.8 }, moderate: { label: "Moderate, about 3 mph", met: 3.5 }, brisk: { label: "Brisk, about 3.5 mph", met: 4.3 } };
+
+const ICONS = {
+  home: '<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg>',
+  cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  stats: '<svg viewBox="0 0 24 24"><path d="M5 21V11M12 21V4M19 21v-7"/></svg>'
+};
+
+const iso = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const daysBetween = (a,b) => Math.round((parse(b)-parse(a))/86400000);
+
+let S = load();
+let view = "home";
+let ws = { i: 0, set: 1, rest: 0, total: 0, t: null };
+let calState = null;
+let range = 7;
+
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) return s; } catch(e) {}
+  return { start: iso(new Date()), done: {}, frozen: {}, streak: 0, processed: null, trips: [], videos: {}, weights: {}, meas: {}, cals: {}, mins: {}, feedback: {}, strengthDays: 3, pace: "moderate", weightKg: "" };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} }
+
+const fmt = s => parse(s).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+function isTravel(dateStr) { return (S.trips || []).some(t => t.from <= dateStr && dateStr <= t.to); }
+function travelBox(todayStr) {
+  const trips = (S.trips || []).filter(t => t.to >= todayStr).sort((a, b) => a.from.localeCompare(b.from));
+  const cur = trips.find(t => t.from <= todayStr);
+  const next = trips.find(t => t.from > todayStr);
+  const msg = cur ? `Travel mode is on until ${fmt(cur.to)}. Strength sessions are paused and walks are 20 min.`
+    : next ? `Next trip: ${fmt(next.from)} to ${fmt(next.to)}. Travel mode turns on by itself.`
+    : "No trips planned. Add trip dates in Stats and travel mode turns on by itself.";
+  return `<div class="card">${msg}</div>`;
+}
+function workoutFor(date) {
+  if (isTravel(iso(date))) return WORKOUTS.walk20;
+  const key = (STRENGTH_DAYS[S.strengthDays] || STRENGTH_DAYS[3])[date.getDay()];
+  if (key) return WORKOUTS[key];
+  return date.getDay() === 0 ? WORKOUTS.walk20 : WORKOUTS.walk30;
+}
+function metFor(w) { return w.kind === "walk" ? PACES[S.pace || "moderate"].met : 3.5; }
+function calories(w) {
+  const kg = Number(S.weightKg);
+  if (!kg) return null;
+  return Math.round((metFor(w) - 1) * kg * (w.mins / 60));
+}
+
+function periodOf(dateStr) { return Math.floor(daysBetween(S.start, dateStr) / PERIOD_DAYS); }
+function freezesLeft(dateStr) {
+  const p = periodOf(dateStr);
+  const used = Object.keys(S.frozen).filter(d => periodOf(d) === p).length;
+  return FREEZES_PER_PERIOD - used;
+}
+function processMissed() {
+  const today = iso(new Date());
+  let from = S.processed ? iso(addDays(parse(S.processed), 1)) : S.start;
+  while (from < today) {
+    if (S.done[from]) { S.streak++; }
+    else if (freezesLeft(from) > 0) { S.frozen[from] = true; }
+    else { S.streak = 0; }
+    from = iso(addDays(parse(from), 1));
+  }
+  S.processed = iso(addDays(new Date(), -1));
+  save();
+}
+function liveStreak() { return S.streak + (S.done[iso(new Date())] ? 1 : 0); }
+
+function clearTimer() { if (ws.t) { clearInterval(ws.t); ws.t = null; } ws.rest = 0; }
+function startRest(sec) {
+  clearTimer();
+  ws.rest = sec; ws.total = sec;
+  ws.t = setInterval(() => {
+    ws.rest--;
+    if (ws.rest <= 0) { clearTimer(); try { navigator.vibrate && navigator.vibrate(200); } catch(e) {} render(); }
+    else {
+      const el = document.getElementById("rest"); if (el) el.textContent = ws.rest;
+      const bar = document.getElementById("restbar"); if (bar) bar.style.width = (ws.rest / ws.total * 100) + "%";
+    }
+  }, 1000);
+}
+
+function render() {
+  const app = document.getElementById("app");
+  const body = view === "home" ? home() : view === "stats" ? stats() : view === "cal" ? cal() : view === "workout" ? workout() : finished();
+  const tab = (id, label) => `<button class="tab ${view === id ? "sel" : ""}" id="tab-${id}">${ICONS[id]}<span>${label}</span></button>`;
+  const tabs = view === "home" || view === "stats" || view === "cal"
+    ? `<nav class="tabs">${tab("home", "Today")}${tab("cal", "Plan")}${tab("stats", "Stats")}</nav>` : "";
+  app.innerHTML = body + tabs;
+  bind();
+}
+
+const shortLabel = w => w.name === "Strength A" ? "Str A" : w.name === "Strength B" ? "Str B" : "Walk " + w.mins;
+function cal() {
+  const todayStr = iso(new Date());
+  if (!calState) { const n = new Date(); calState = { y: n.getFullYear(), m: n.getMonth(), sel: todayStr }; }
+  const first = new Date(calState.y, calState.m, 1);
+  const lead = (first.getDay() + 6) % 7;
+  const count = new Date(calState.y, calState.m + 1, 0).getDate();
+  let cells = ["M","T","W","T","F","S","S"].map(x => `<div class="h">${x}</div>`).join("");
+  for (let i = 0; i < lead; i++) cells += `<div class="blank"></div>`;
+  for (let n = 1; n <= count; n++) {
+    const d = new Date(calState.y, calState.m, n), s = iso(d), w = workoutFor(d);
+    const cls = ["day", S.done[s] ? "done" : "", isTravel(s) ? "trip" : "", s === todayStr ? "today" : "", s === calState.sel ? "sel" : ""].join(" ");
+    const mark = S.done[s] ? "&#10003;" : S.frozen[s] ? "&#10052;" : "";
+    cells += `<button class="${cls}" data-day="${s}"><b>${n}</b><span>${shortLabel(w)}</span><span>${mark}</span></button>`;
+  }
+  const sel = calState.sel, sd = parse(sel), sw = workoutFor(sd);
+  let status = sel < S.start ? "Before you started" : S.done[sel] ? "Done" : S.frozen[sel] ? "Missed, a freeze saved your streak" : sel < todayStr ? "Missed" : sel === todayStr ? "Today" : "Planned";
+  if (isTravel(sel)) status += " &middot; travel day";
+  const moves = sw.kind === "strength"
+    ? `<ol class="steps">${sw.exercises.map(e => `<li>${e.name}, ${e.sets > 1 ? e.sets + " sets of " : ""}${e.reps}</li>`).join("")}</ol>` : `<div class="m">Walk at a comfortable pace.</div>`;
+  return `<div class="row"><button class="btn small" id="cal-prev" aria-label="Previous month">&lsaquo;</button><h2>${first.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</h2><button class="btn small" id="cal-next" aria-label="Next month">&rsaquo;</button></div>
+    <div class="cal">${cells}</div>
+    <div class="cap" style="text-align:center">Lime = done, blue = trip, &#10052; = freeze used</div>
+    <div class="work ${sw.kind === "strength" ? "s" : ""}"><div class="eyebrow">${sd.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })} &middot; ${status}</div>
+      <div class="t">${sw.name}, ${sw.mins} min</div>${moves}</div>`;
+}
+
+function tipText() {
+  const dates = Object.keys(S.feedback).sort();
+  const last2 = dates.slice(-2).map(d => S.feedback[d]);
+  if (last2.length === 2 && last2.every(f => f === "easy")) return "Your last two strength sessions felt easy. Time to make them harder: lower slowly (3 seconds), pause at the bottom, or use single-leg versions. Each exercise lists a tip.";
+  if (last2.length === 2 && last2.every(f => f === "hard")) return "Your last two strength sessions felt hard. Go easy on yourself. In Stats you can switch to 2 strength days a week.";
+  return "";
+}
+
+function home() {
+  const today = new Date(), todayStr = iso(today);
+  const w = workoutFor(today);
+  const dow = today.getDay(), monday = addDays(today, -((dow + 6) % 7));
+  const names = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+  let cells = "";
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(monday, i), s = iso(d), dw = workoutFor(d);
+    let cls = "c", inner = d.getDate();
+    if (S.done[s]) { cls += " done"; inner = "&#10003;"; }
+    else if (S.frozen[s]) { cls += " fz"; inner = "&#10052;"; }
+    else if (s === todayStr) cls += " t";
+    cells += `<div class="d"><div class="dn">${names[d.getDay()]}</div><div class="${cls}">${inner}</div><div class="dot ${dw.kind === "strength" ? "s" : "w"}"></div></div>`;
+  }
+  const doneToday = !!S.done[todayStr];
+  const moves = w.kind === "strength" ? w.exercises.filter(e => e.id !== "warmup" && e.id !== "cooldown").map(e => e.name).join(", ") + ", then a stretch" : "Easy pace. Stretch for 2 minutes after.";
+  const cal = calories(w);
+  const tip = tipText();
+  const n = liveStreak();
+  const line = n === 0 ? "Finish today's goal to start your streak." : n === 1 ? "You have a 1 day streak going." : `You have a ${n} day streak going.`;
+  return `
+    <div class="row" style="align-items:flex-start"><div><div class="eyebrow">${today.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</div><h1>Hi ${NAME}</h1></div><span class="chip">&#128293; ${n}</span></div>
+    <div class="sub" style="margin-top:-8px">${line}</div>
+    <div class="week">${cells}</div>
+    <div class="row"><span class="chip ghost">&#10052; ${freezesLeft(todayStr)} of ${FREEZES_PER_PERIOD} freezes left</span><span class="cap">${w.kind === "strength" ? "&#9679; strength" : "&#9679; walk"}</span></div>
+    <div class="work ${w.kind === "strength" ? "s" : ""}">${doneToday ? `<div class="check">&#10003;</div>` : ""}
+      <div class="eyebrow">Today &middot; ${w.mins} min</div>
+      <div class="t">${w.name}</div>
+      <div class="m">${moves}</div>
+      <div class="m" style="margin-top:10px;font-size:13px">${cal ? `About ${cal} extra calories burned if you finish` : "Log your weight in Stats to see calories"}</div></div>
+    ${tip ? `<div class="notice">${tip}</div>` : ""}
+    ${doneToday ? `<div class="card" style="text-align:center"><b>Done for today.</b> See you tomorrow.</div>` : `<button class="btn" id="start">&#9654;&#xFE0E; Start ${w.kind === "strength" ? "workout" : "walk"}</button>`}
+    ${travelBox(todayStr)}
+    <div class="link" id="reset">Reset all data</div>`;
+}
+
+function workout() {
+  const w = workoutFor(new Date());
+  if (w.kind === "walk") {
+    return `<button class="back" id="back">&larr; Back</button>
+      <h1>${w.name}, ${w.mins} min</h1>
+      <div class="card">Head out at a comfortable pace. Tap done when you're back.</div>
+      <div class="card">After your walk, stretch for 2 minutes: calves (hands on a wall, one heel back), quads (pull your heel to your glute), and hamstrings (heel forward, hinge at the hips). Hold each for 30 seconds per side.</div>
+      <button class="btn" id="finish">Done</button>`;
+  }
+  const ex = w.exercises[ws.i];
+  const last = ws.i === w.exercises.length - 1;
+  const segs = `<div class="segs">${w.exercises.map((e, i) => `<div class="seg ${i <= ws.i ? "on" : ""}"></div>`).join("")}</div>`;
+  if (ws.rest > 0) {
+    return `<div class="row"><button class="back" id="back">&larr;</button>${segs}</div>
+      <div class="eyebrow" style="text-align:center;margin-top:40px">Rest</div>
+      <div class="big-num" id="rest">${ws.rest}</div>
+      <div class="pbar"><i id="restbar" style="width:${ws.rest / ws.total * 100}%"></i></div>
+      <div class="card" style="text-align:center">Next: <b>${ex.name}</b>, set ${ws.set} of ${ex.sets}</div>
+      <button class="btn" id="skiprest">Skip rest</button>`;
+  }
+  const vid = S.videos[ex.id] || DEFAULT_VIDEOS[ex.id];
+  const embed = vid ? toEmbed(vid) : null;
+  const lastSet = ws.set === ex.sets;
+  const label = lastSet && last ? "Finish workout" : lastSet ? (ex.sets > 1 ? "Done, next move" : "Done, start") : "Done set " + ws.set;
+  const dots = ex.sets > 1 ? `<div class="setrow">${Array.from({ length: ex.sets }, (_, i) => `<div class="setdot ${i + 1 < ws.set ? "done" : i + 1 === ws.set ? "on" : ""}">${i + 1}</div>`).join("")}<span class="cap" style="margin-left:6px">${ex.reps}</span></div>` : `<div class="cap">${ex.reps}</div>`;
+  return `<div class="row"><button class="back" id="back">&larr;</button>${segs}</div>
+    <div><div class="eyebrow">Move ${ws.i + 1} of ${w.exercises.length}</div><h1>${ex.name}</h1></div>
+    ${dots}
+    <div class="vid">${embed ? `<iframe src="${embed}" allowfullscreen></iframe>` : "No video yet"}</div>
+    <div class="row"><input type="text" id="vurl" placeholder="Swap video: paste a YouTube link" value="${S.videos[ex.id] || ""}"><button class="btn small" id="vsave">Save</button></div>
+    <ol class="steps">${ex.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+    ${ex.harder ? `<div class="cap">Too easy? ${ex.harder}.</div>` : ""}
+    <button class="btn" id="setdone" style="margin-bottom:16px">${label}</button>`;
+}
+
+function finished() {
+  const w = workoutFor(new Date());
+  const today = iso(new Date());
+  const fb = S.feedback[today];
+  const cal = S.cals[today];
+  return `<div style="margin-top:40px;text-align:center"><span class="chip" style="font-size:22px;padding:10px 18px">&#128293; ${liveStreak()}</span></div>
+    <h1 style="text-align:center">Nice work, ${NAME}</h1>
+    <div class="sub" style="text-align:center">Streak extended${cal ? " &middot; about " + cal + " extra calories burned" : ""}</div>
+    ${w.kind === "strength" ? `<div class="card"><div style="margin-bottom:10px"><b>How did it feel?</b></div>
+      <div class="row"><button class="btn small ${fb === "easy" ? "sel" : ""}" data-fb="easy">Easy</button><button class="btn small ${fb === "right" ? "sel" : ""}" data-fb="right">Just right</button><button class="btn small ${fb === "hard" ? "sel" : ""}" data-fb="hard">Hard</button></div></div>` : ""}
+    <button class="btn" id="home">Back home</button>`;
+}
+
+function toEmbed(url) {
+  const m = url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);
+  return m ? "https://www.youtube-nocookie.com/embed/" + m[1] : null;
+}
+
+function complete() {
+  clearTimer();
+  const today = iso(new Date()), w = workoutFor(new Date());
+  S.done[today] = true;
+  S.cals = S.cals || {}; S.mins = S.mins || {};
+  S.cals[today] = calories(w) || 0;
+  S.mins[today] = w.mins;
+  save(); view = "finished"; render();
+}
+
+function setWeight(kg) {
+  const n = parseFloat(kg);
+  if (!(n >= 30 && n <= 300)) return false;
+  S.weights[iso(new Date())] = Math.round(n * 10) / 10;
+  S.weightKg = Math.round(n * 10) / 10;
+  save();
+  return true;
+}
+function setMeas(waist, thigh) {
+  const w = parseFloat(waist), t = parseFloat(thigh);
+  if (!(w >= 30 && w <= 200) || !(t >= 20 && t <= 150)) return false;
+  S.meas[iso(new Date())] = { waist: w, thigh: t };
+  save();
+  return true;
+}
+
+function lineChart(points, unit) {
+  if (points.length === 0) return `<div class="card" style="text-align:center">No weight logged yet</div>`;
+  const W = 340, H = 140, P = 28;
+  const vals = points.map(p => p.v);
+  const lo = Math.min(...vals) - 1, hi = Math.max(...vals) + 1;
+  const x = i => points.length === 1 ? W / 2 : P + i * (W - 2 * P) / (points.length - 1);
+  const y = v => H - P - (v - lo) / (hi - lo) * (H - 2 * P);
+  const path = points.map((p, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(p.v).toFixed(1)).join(" ");
+  const dots = points.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4.5" style="fill:var(--ink);stroke:var(--card);stroke-width:2"/>`).join("");
+  const first = points[0], last = points[points.length - 1];
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Weight over time">
+    <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" style="stroke:var(--line)"/>
+    <path d="${path}" style="fill:none;stroke:var(--ink);stroke-width:3;stroke-linejoin:round"/>${dots}
+    <text x="${P}" y="${H-8}" font-size="11" style="fill:var(--muted)">${first.d.slice(5)}</text>
+    <text x="${W-P}" y="${H-8}" font-size="11" style="fill:var(--muted)" text-anchor="end">${last.d.slice(5)}</text>
+    <text x="${P}" y="14" font-size="11" style="fill:var(--muted)">${hi.toFixed(1)} ${unit}</text>
+    <text x="${P}" y="${H-P-4}" font-size="11" style="fill:var(--muted)">${lo.toFixed(1)}</text>
+  </svg>`;
+}
+function barChart(items, every) {
+  const W = 340, H = 140, P = 24, max = Math.max(1, ...items.map(i => i.v));
+  const bw = (W - 2 * P) / items.length;
+  const bars = items.map((it, i) => {
+    const h = it.v / max * (H - 2 * P - 10);
+    const lab = i % every === 0 || i === items.length - 1 ? `<text x="${(P + i * bw + bw / 2).toFixed(1)}" y="${H - 8}" font-size="10" style="fill:var(--muted)" text-anchor="middle">${it.label}</text>` : "";
+    return `<rect x="${(P + i * bw + 1.5).toFixed(1)}" y="${(H - P - h).toFixed(1)}" width="${Math.max(2, bw - 3).toFixed(1)}" height="${Math.max(h, it.v ? 2 : 0).toFixed(1)}" rx="3" style="fill:${it.v ? "var(--bar)" : "var(--line)"}"/>${lab}`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Calories per day">
+    <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" style="stroke:var(--line)"/>${bars}
+    <text x="${P}" y="14" font-size="11" style="fill:var(--muted)">${max} cal</text></svg>`;
+}
+
+function sumRange(map, offset, len) {
+  let t = 0;
+  for (let i = offset; i < offset + len; i++) { const s = iso(addDays(new Date(), -i)); if (S.done[s]) t += (map && map[s]) || 0; }
+  return t;
+}
+function countRange(offset, len) {
+  let t = 0;
+  for (let i = offset; i < offset + len; i++) if (S.done[iso(addDays(new Date(), -i))]) t++;
+  return t;
+}
+function tile(label, now, prev, unit) {
+  const d = now - prev;
+  const delta = d === 0 ? "" : `<span class="dl ${d >= 0 ? "up" : "down"}">${d >= 0 ? "&#9650;" : "&#9660;"} ${Math.abs(d)}</span>`;
+  return `<div class="tile"><div class="k">${label}</div><div class="v">${now}${unit ? `<span class="cap" style="font-weight:600"> ${unit}</span>` : ""}${delta}</div></div>`;
+}
+
+function stats() {
+  const wpts = Object.keys(S.weights).sort().slice(-30).map(d => ({ d, v: S.weights[d] }));
+  const items = [];
+  for (let i = range - 1; i >= 0; i--) {
+    const d = addDays(new Date(), -i), s = iso(d);
+    items.push({ v: S.done[s] ? (S.cals && S.cals[s]) || 0 : 0, label: d.getDate() });
+  }
+  const total = items.reduce((a, b) => a + b.v, 0);
+  const latest = wpts.length ? wpts[wpts.length - 1].v : null;
+  const change = wpts.length > 1 ? Math.round((latest - wpts[0].v) * 10) / 10 : null;
+  const md = Object.keys(S.meas).sort();
+  let mtext = "No measurements yet";
+  if (md.length) {
+    const f = S.meas[md[0]], l = S.meas[md[md.length - 1]];
+    mtext = `Waist ${l.waist} cm, thigh ${l.thigh} cm` + (md.length > 1 ? ` (waist ${l.waist - f.waist >= 0 ? "+" : ""}${Math.round((l.waist - f.waist) * 10) / 10}, thigh ${l.thigh - f.thigh >= 0 ? "+" : ""}${Math.round((l.thigh - f.thigh) * 10) / 10} since first)` : "");
+  }
+  return `<div class="row"><h1>Stats</h1><div style="display:flex;gap:6px"><button class="btn small ${range === 7 ? "sel" : ""}" data-range="7">7 days</button><button class="btn small ${range === 30 ? "sel" : ""}" data-range="30">30 days</button></div></div>
+    <div class="tiles">
+      ${tile("Workouts", countRange(0, range), countRange(range, range), "")}
+      ${tile("Minutes", sumRange(S.mins, 0, range), sumRange(S.mins, range, range), "min")}
+      ${tile("Calories", sumRange(S.cals, 0, range), sumRange(S.cals, range, range), "cal")}
+      ${tile("Streak", liveStreak(), liveStreak(), "days")}
+    </div>
+    <div class="card"><div class="row"><b>Calories burned</b><span class="cap">${total} total</span></div>${barChart(items, range === 7 ? 1 : 5)}</div>
+    <div class="card"><div class="row"><b>Weight</b><span class="cap">${latest ? latest + " kg" + (change !== null ? " (" + (change > 0 ? "+" : "") + change + " since first log)" : "") : ""}</span></div>${lineChart(wpts, "kg")}
+      <div class="row" style="margin-top:10px"><input type="text" inputmode="decimal" id="wt" placeholder="Today's weight in kg, e.g. 58"><button class="btn small" id="wsave">Log</button></div>
+      <div id="werr" class="cap" style="color:var(--err)"></div>
+      <div class="cap" style="margin-top:6px">On a build-muscle, lose-fat plan, the scale may barely move. Measurements tell the real story.</div></div>
+    <div class="card"><div class="row"><b>Measurements (cm)</b><span class="cap">every 2 weeks</span></div>
+      <div class="row" style="margin-top:10px"><input type="text" inputmode="decimal" id="waist" placeholder="Waist"><input type="text" inputmode="decimal" id="thigh" placeholder="Thigh"><button class="btn small" id="msave">Log</button></div>
+      <div id="merr" class="cap" style="color:var(--err)"></div>
+      <div style="margin-top:8px">${mtext}</div></div>
+    <div class="card"><div class="row"><b>Trips</b><span class="cap">travel mode turns on by itself</span></div>
+      <div class="row" style="margin-top:10px"><input type="date" id="tfrom" aria-label="Trip start"><input type="date" id="tto" aria-label="Trip end"><button class="btn small" id="tsave">Add</button></div>
+      <div id="terr" class="cap" style="color:var(--err)"></div>
+      ${(S.trips || []).filter(t => t.to >= iso(new Date())).sort((a, b) => a.from.localeCompare(b.from)).map(t => `<div class="row" style="margin-top:8px"><span>${fmt(t.from)} to ${fmt(t.to)}</span><button class="btn small" data-rm="${t.from}|${t.to}">Remove</button></div>`).join("")}</div>
+    <div class="card row"><span>Walking pace</span><select id="pace">${Object.keys(PACES).map(k => `<option value="${k}" ${(S.pace || "moderate") === k ? "selected" : ""}>${PACES[k].label}</option>`).join("")}</select></div>
+    <div class="card row"><span>Strength days a week</span><select id="sdays"><option value="3" ${S.strengthDays === 3 ? "selected" : ""}>3 (Mon, Wed, Fri)</option><option value="2" ${S.strengthDays === 2 ? "selected" : ""}>2 (Tue, Fri)</option></select></div>
+    <div class="cap" style="padding-bottom:8px">Calories are the extra burn from the workout itself, on top of what your body burns at rest anyway. They're estimates from your weight, pace and time, and your actual burn can differ by 20% or more.</div>`;
+}
+
+function bind() {
+  const $ = id => document.getElementById(id);
+  const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  on("start", () => { ws = { i: 0, set: 1, rest: 0, total: 0, t: null }; view = "workout"; render(); });
+  on("back", () => { clearTimer(); view = "home"; render(); });
+  on("home", () => { view = "home"; render(); });
+  on("finish", complete);
+  on("skiprest", () => { clearTimer(); render(); });
+  on("setdone", () => {
+    const w = workoutFor(new Date()), ex = w.exercises[ws.i];
+    if (ws.set < ex.sets) { ws.set++; startRest(ex.rest); render(); }
+    else if (ws.i >= w.exercises.length - 1) complete();
+    else { ws.i++; ws.set = 1; render(); }
+  });
+  on("vsave", () => {
+    const w = workoutFor(new Date()), ex = w.exercises[ws.i];
+    const v = $("vurl").value.trim();
+    if (v && !toEmbed(v)) { $("vurl").style.borderColor = "#d33"; return; }
+    if (v) S.videos[ex.id] = v; else delete S.videos[ex.id];
+    save(); render();
+  });
+  document.querySelectorAll("[data-fb]").forEach(b => b.onclick = () => { S.feedback[iso(new Date())] = b.dataset.fb; save(); render(); });
+  document.querySelectorAll("[data-range]").forEach(b => b.onclick = () => { range = parseInt(b.dataset.range, 10); render(); });
+  on("tsave", () => {
+    const f = $("tfrom").value, t = $("tto").value;
+    if (!f || !t) { $("terr").textContent = "Pick a start and end date"; return; }
+    if (t < f) { $("terr").textContent = "The end date is before the start date"; return; }
+    if (t < iso(new Date())) { $("terr").textContent = "That trip is already over"; return; }
+    S.trips = (S.trips || []).concat({ from: f, to: t }); save(); render();
+  });
+  document.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { S.trips = S.trips.filter(t => t.from + "|" + t.to !== b.dataset.rm); save(); render(); });
+  on("tab-home", () => { view = "home"; render(); });
+  on("tab-stats", () => { view = "stats"; render(); });
+  on("tab-cal", () => { view = "cal"; render(); });
+  on("cal-prev", () => { calState.m--; if (calState.m < 0) { calState.m = 11; calState.y--; } render(); });
+  on("cal-next", () => { calState.m++; if (calState.m > 11) { calState.m = 0; calState.y++; } render(); });
+  document.querySelectorAll("[data-day]").forEach(b => b.onclick = () => { calState.sel = b.dataset.day; render(); });
+  on("wsave", () => { if (setWeight($("wt").value)) render(); else $("werr").textContent = "Enter a weight between 30 and 300 kg"; });
+  on("msave", () => { if (setMeas($("waist").value, $("thigh").value)) render(); else $("merr").textContent = "Enter your waist and thigh in cm"; });
+  if ($("pace")) $("pace").onchange = () => { S.pace = $("pace").value; save(); render(); };
+  if ($("sdays")) $("sdays").onchange = () => { S.strengthDays = parseInt($("sdays").value, 10); save(); render(); };
+  on("reset", () => {
+    if ($("reset").dataset.armed) { try { localStorage.removeItem(KEY); } catch(e) {} S = load(); processMissed(); render(); }
+    else { $("reset").dataset.armed = 1; $("reset").textContent = "Tap again to erase everything"; }
+  });
+}
+
+processMissed();
+render();
+</script>
+</body>
+</html>
