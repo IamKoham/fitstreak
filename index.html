@@ -265,7 +265,7 @@ function render() {
   const body = view === "home" ? home() : view === "badges" ? badges() : view === "stats" ? stats() : view === "cal" ? cal() : view === "workout" ? workout() : finished();
   const tab = (id, label) => `<button class="tab ${view === id ? "sel" : ""}" id="tab-${id}">${ICONS[id]}<span>${label}</span></button>`;
   const tabs = view === "home" || view === "stats" || view === "cal"
-    ? `<nav class="tabs">${tab("home", "Today")}${tab("cal", "Plan")}${tab("stats", "Stats")}</nav>` : "";
+    ? `<nav class="tabs">${tab("home", "Home")}${tab("cal", "Plan")}${tab("stats", "Stats")}</nav>` : "";
   app.innerHTML = body + tabs;
   bind();
 }
