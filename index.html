@@ -133,6 +133,15 @@ const ICONS = {
   stats: '<svg viewBox="0 0 24 24"><path d="M5 21V11M12 21V4M19 21v-7"/></svg>'
 };
 
+const MILESTONES = [
+  { d: 7, name: "First week" }, { d: 21, name: "Habit formed" }, { d: 50, name: "Fifty strong" }, { d: 90, name: "Quarter year" },
+  { d: 100, name: "The century" }, { d: 150, name: "Unstoppable" }, { d: 200, name: "Iron will" }, { d: 365, name: "Full year" }
+];
+function badgeSvg(d, earned) {
+  const fill = earned ? "var(--lime)" : "var(--card)", stroke = earned ? "var(--ink)" : "var(--line)", txt = earned ? "var(--onlime)" : "var(--muted)";
+  return `<svg viewBox="0 0 80 80" width="72" height="72" role="img" aria-label="${d} day badge"><polygon points="40,4 72,22 72,58 40,76 8,58 8,22" style="fill:${fill};stroke:${stroke};stroke-width:3;stroke-linejoin:round"/><text x="40" y="47" text-anchor="middle" font-size="${d >= 100 ? 24 : 28}" font-weight="800" style="fill:${txt};font-family:inherit">${d}</text></svg>`;
+}
+
 const iso = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
 const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
 const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
@@ -143,6 +152,7 @@ let view = "home";
 let ws = { i: 0, set: 1, rest: 0, total: 0, t: null };
 let calState = null;
 let range = 7;
+let newly = [];
 
 function load() {
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) return s; } catch(e) {}
@@ -210,7 +220,7 @@ function startRest(sec) {
 
 function render() {
   const app = document.getElementById("app");
-  const body = view === "home" ? home() : view === "stats" ? stats() : view === "cal" ? cal() : view === "workout" ? workout() : finished();
+  const body = view === "home" ? home() : view === "badges" ? badges() : view === "stats" ? stats() : view === "cal" ? cal() : view === "workout" ? workout() : finished();
   const tab = (id, label) => `<button class="tab ${view === id ? "sel" : ""}" id="tab-${id}">${ICONS[id]}<span>${label}</span></button>`;
   const tabs = view === "home" || view === "stats" || view === "cal"
     ? `<nav class="tabs">${tab("home", "Today")}${tab("cal", "Plan")}${tab("stats", "Stats")}</nav>` : "";
@@ -253,6 +263,26 @@ function tipText() {
   return "";
 }
 
+function nextBadgeCard(n) {
+  const earnedCount = MILESTONES.filter(m => (S.badges || {})[m.d]).length;
+  const next = MILESTONES.find(m => m.d > n);
+  const body = next
+    ? `<div class="row"><b>Next badge: ${next.d} days</b><span class="cap">${next.d - n} to go</span></div><div class="pbar" style="margin-top:10px"><i style="width:${Math.min(100, n / next.d * 100)}%"></i></div>`
+    : `<b>You've earned every badge.</b>`;
+  return `<button class="card" data-go="badges" style="text-align:left;width:100%;cursor:pointer;font-family:inherit">${body}<div class="cap" style="margin-top:8px">${earnedCount} of ${MILESTONES.length} badges earned</div></button>`;
+}
+function badges() {
+  const n = liveStreak(), best = Math.max(S.best || 0, n);
+  const cards = MILESTONES.map(m => {
+    const got = (S.badges || {})[m.d];
+    return `<div class="card" style="text-align:center;padding:14px 8px">${badgeSvg(m.d, !!got)}<div style="margin-top:6px"><b>${m.name}</b></div><div class="cap">${got ? "Earned " + fmt(got) : Math.max(0, m.d - n) + " days to go"}</div></div>`;
+  }).join("");
+  return `<div class="row"><button class="back" id="back">&larr; Back</button></div>
+    <div><div class="eyebrow">Achievements</div><h1>Streak badges</h1><div class="sub">Current streak ${n} days &middot; best ${best}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${cards}</div>
+    <div class="cap" style="padding-bottom:16px">Badges stay yours even if a streak ends. Freezes protect missed days, so your streak keeps going.</div>`;
+}
+
 function home() {
   const today = new Date(), todayStr = iso(today);
   const w = workoutFor(today);
@@ -274,7 +304,7 @@ function home() {
   const n = liveStreak();
   const line = n === 0 ? "Finish today's goal to start your streak." : n === 1 ? "You have a 1 day streak going." : `You have a ${n} day streak going.`;
   return `
-    <div class="row" style="align-items:flex-start"><div><div class="eyebrow">${today.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</div><h1>Hi ${NAME}</h1></div><span class="chip">&#128293; ${n}</span></div>
+    <div class="row" style="align-items:flex-start"><div><div class="eyebrow">${today.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</div><h1>Hi ${NAME}</h1></div><span class="chip" data-go="badges" style="cursor:pointer">&#128293; ${n}</span></div>
     <div class="sub" style="margin-top:-8px">${line}</div>
     <div class="week">${cells}</div>
     <div class="row"><span class="chip ghost">&#10052; ${freezesLeft(todayStr)} of ${FREEZES_PER_PERIOD} freezes left</span><span class="cap">${w.kind === "strength" ? "&#9679; strength" : "&#9679; walk"}</span></div>
@@ -284,6 +314,7 @@ function home() {
       <div class="m">${moves}</div>
       <div class="m" style="margin-top:10px;font-size:13px">${cal ? `About ${cal} extra calories burned if you finish` : "Log your weight in Stats to see calories"}</div></div>
     ${tip ? `<div class="notice">${tip}</div>` : ""}
+    ${nextBadgeCard(n)}
     ${doneToday ? `<div class="card" style="text-align:center"><b>Done for today.</b> See you tomorrow.</div>` : `<button class="btn" id="start">&#9654;&#xFE0E; Start ${w.kind === "strength" ? "workout" : "walk"}</button>`}
     ${travelBox(todayStr)}
     <div class="link" id="reset">Reset all data</div>`;
@@ -332,6 +363,7 @@ function finished() {
   return `<div style="margin-top:40px;text-align:center"><span class="chip" style="font-size:22px;padding:10px 18px">&#128293; ${liveStreak()}</span></div>
     <h1 style="text-align:center">Nice work, ${NAME}</h1>
     <div class="sub" style="text-align:center">Streak extended${cal ? " &middot; about " + cal + " extra calories burned" : ""}</div>
+    ${newly.map(m => `<div class="card" style="text-align:center;border-color:var(--lime);border-width:2px">${badgeSvg(m.d, true)}<div style="margin-top:6px"><b>New badge: ${m.name}</b></div><div class="cap">${m.d} day streak</div></div>`).join("")}
     ${w.kind === "strength" ? `<div class="card"><div style="margin-bottom:10px"><b>How did it feel?</b></div>
       <div class="row"><button class="btn small ${fb === "easy" ? "sel" : ""}" data-fb="easy">Easy</button><button class="btn small ${fb === "right" ? "sel" : ""}" data-fb="right">Just right</button><button class="btn small ${fb === "hard" ? "sel" : ""}" data-fb="hard">Hard</button></div></div>` : ""}
     <button class="btn" id="home">Back home</button>`;
@@ -349,6 +381,11 @@ function complete() {
   S.cals = S.cals || {}; S.mins = S.mins || {};
   S.cals[today] = calories(w) || 0;
   S.mins[today] = w.mins;
+  S.badges = S.badges || {};
+  const n = liveStreak();
+  S.best = Math.max(S.best || 0, n);
+  newly = MILESTONES.filter(m => n >= m.d && !S.badges[m.d]);
+  newly.forEach(m => { S.badges[m.d] = today; });
   save(); view = "finished"; render();
 }
 
@@ -462,7 +499,8 @@ function bind() {
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
   on("start", () => { ws = { i: 0, set: 1, rest: 0, total: 0, t: null }; view = "workout"; render(); });
   on("back", () => { clearTimer(); view = "home"; render(); });
-  on("home", () => { view = "home"; render(); });
+  on("home", () => { newly = []; view = "home"; render(); });
+  document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { view = b.dataset.go; render(); });
   on("finish", complete);
   on("skiprest", () => { clearTimer(); render(); });
   on("setdone", () => {
