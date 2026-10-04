@@ -507,6 +507,13 @@ function setWeight(kg) {
   if (!(n >= 30 && n <= 300)) return false;
   S.weights[iso(new Date())] = Math.round(n * 10) / 10;
   S.weightKg = Math.round(n * 10) / 10;
+  // Workouts finished before any weight was logged were saved as 0 calories. Fill them in now.
+  S.cals = S.cals || {}; S.mins = S.mins || {};
+  Object.keys(S.done).forEach(d => {
+    if (S.cals[d]) return;
+    const w = workoutFor(parse(d));
+    S.cals[d] = calories(Object.assign({}, w, { mins: S.mins[d] || w.mins }));
+  });
   save();
   return true;
 }
