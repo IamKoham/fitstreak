@@ -9,6 +9,9 @@
 <meta name="apple-mobile-web-app-title" content="FitStreak">
 <meta name="theme-color" content="#f6f6f4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0c0c0e" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>FitStreak</title>
 <style>
 :root{--bg:#f6f6f4;--outer:#e9e9ec;--card:#fff;--ink:#111;--onink:#fff;--muted:#777783;--line:#e8e8ea;--lime:#c5f02c;--onlime:#111;--blue:#3b6bff;--sky:#e7eeff;--skyink:#2447c8;--bar:#111;--warn:#fff3cf;--warnink:#6b5412;--err:#d33;--good:#17a34a}
@@ -200,6 +203,24 @@ let ws = { i: 0, set: 1, rest: 0, total: 0, end: 0, t: null, day: null, w: null 
 let calState = null;
 let range = 7;
 let newly = [];
+let installPrompt = null;
+
+// Views above Home sit on one extra history entry, so the phone's back button returns to Home instead of leaving the app.
+function go(v) {
+  if (v === "home") {
+    if (history.state && history.state.v && history.state.v !== "home") { history.back(); return; }
+    clearTimer(); newly = []; view = "home"; render(); return;
+  }
+  try { if (view === "home") history.pushState({ v }, ""); else history.replaceState({ v }, ""); } catch (e) {}
+  view = v; render();
+}
+function leaveHome() {
+  if (view === "workout" && (ws.i > 0 || ws.set > 1) && !confirm("Leave this workout? Your progress in this session won't be saved.")) {
+    try { history.pushState({ v: "workout" }, ""); } catch (e) {}
+    return;
+  }
+  clearTimer(); newly = []; view = "home"; render();
+}
 
 function load() {
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) return s; } catch(e) {}
@@ -398,6 +419,8 @@ function home() {
     ${tip}
     ${nextBadgeCard(n)}
     ${doneToday ? `<div class="card" style="text-align:center"><b>Done for today.</b> See you tomorrow.</div>` : `<button class="btn" id="start">&#9654;&#xFE0E; Start ${w.kind === "strength" ? "workout" : "walk"}</button>`}
+    ${installPrompt && !S.installDismissed ? `<div class="card"><div class="row" style="justify-content:flex-start;gap:12px"><img src="icon-192.png" width="44" height="44" alt="" style="border-radius:10px"><div><b>Add FitStreak to your home screen</b><div>Opens like an app, works offline, and keeps your streak safer.</div></div></div>
+      <div class="row" style="margin-top:10px;justify-content:flex-start"><button class="btn small sel" id="install">Install</button><button class="btn small" id="install-no">Not now</button></div></div>` : ""}
     ${travelBox(todayStr)}
     ${backupDue() ? `<button class="notice" data-go="stats" style="border:0;text-align:left;width:100%;cursor:pointer;font-family:inherit"><b>Back up your streak.</b> Your data lives only in this browser. Tap to save a backup file in Stats.</button>` : ""}
     <div style="height:8px"></div>`;
@@ -475,7 +498,7 @@ function complete() {
   S.best = Math.max(S.best || 0, n);
   newly = MILESTONES.filter(m => n >= m.d && !S.badges[m.d]);
   newly.forEach(m => { S.badges[m.d] = today; });
-  save(); view = "finished"; render();
+  save(); go("finished");
   celebrate(newly.length > 0);
 }
 
@@ -609,10 +632,10 @@ function validBackup(d) {
 function bind() {
   const $ = id => document.getElementById(id);
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
-  on("start", () => { const d = new Date(); ws = { i: 0, set: 1, rest: 0, total: 0, end: 0, t: null, day: iso(d), w: sessionFor(d) }; view = "workout"; render(); });
-  on("back", () => { clearTimer(); view = "home"; render(); });
-  on("home", () => { newly = []; view = "home"; render(); });
-  document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { view = b.dataset.go; render(); });
+  on("start", () => { const d = new Date(); ws = { i: 0, set: 1, rest: 0, total: 0, end: 0, t: null, day: iso(d), w: sessionFor(d) }; go("workout"); });
+  on("back", () => go("home"));
+  on("home", () => go("home"));
+  document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
   on("finish", complete);
   on("skiprest", () => { clearTimer(); render(); });
   on("setdone", () => {
@@ -639,9 +662,11 @@ function bind() {
     S.trips = (S.trips || []).concat({ from: f, to: t }); save(); render();
   });
   document.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { S.trips = S.trips.filter(t => t.from + "|" + t.to !== b.dataset.rm); save(); render(); });
-  on("tab-home", () => { view = "home"; render(); });
-  on("tab-stats", () => { view = "stats"; render(); });
-  on("tab-cal", () => { view = "cal"; render(); });
+  on("tab-home", () => go("home"));
+  on("tab-stats", () => go("stats"));
+  on("tab-cal", () => go("cal"));
+  on("install", () => { if (!installPrompt) return; installPrompt.prompt(); installPrompt.userChoice.then(() => { installPrompt = null; render(); }); });
+  on("install-no", () => { S.installDismissed = iso(new Date()); save(); render(); });
   on("cal-prev", () => { calState.m--; if (calState.m < 0) { calState.m = 11; calState.y--; } render(); });
   on("cal-next", () => { calState.m++; if (calState.m > 11) { calState.m = 0; calState.y++; } render(); });
   document.querySelectorAll("[data-day]").forEach(b => b.onclick = () => { calState.sel = b.dataset.day; render(); });
@@ -678,6 +703,11 @@ document.addEventListener("visibilitychange", () => {
   else render();
 });
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+try { history.replaceState({ v: "home" }, ""); } catch (e) {}
+window.addEventListener("popstate", leaveHome);
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; if (view === "home") render(); });
+window.addEventListener("appinstalled", () => { installPrompt = null; if (view === "home") render(); });
+try { if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js"); } catch (e) {}
 </script>
 </body>
 </html>
