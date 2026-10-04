@@ -81,6 +81,9 @@ input:focus,select:focus{outline:none;border-color:var(--ink)}
 .cal .day.today{box-shadow:inset 0 0 0 2px var(--ink)}
 .cal .day.sel{box-shadow:inset 0 0 0 2px var(--blue)}
 .cal .blank{visibility:hidden}
+.pop{animation:pop .7s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes pop{0%{transform:scale(.3) rotate(-14deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+@media (prefers-reduced-motion:reduce){.pop{animation:none}}
 </style>
 </head>
 <body>
@@ -137,9 +140,48 @@ const MILESTONES = [
   { d: 7, name: "First week" }, { d: 21, name: "Habit formed" }, { d: 50, name: "Fifty strong" }, { d: 90, name: "Quarter year" },
   { d: 100, name: "The century" }, { d: 150, name: "Unstoppable" }, { d: 200, name: "Iron will" }, { d: 365, name: "Full year" }
 ];
-function badgeSvg(d, earned) {
+function confetti(count, bursts) {
+  try {
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const c = document.createElement("canvas");
+    c.style.cssText = "position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:99";
+    document.body.appendChild(c);
+    const dpr = window.devicePixelRatio || 1, W = window.innerWidth, H = window.innerHeight;
+    c.width = W * dpr; c.height = H * dpr;
+    const ctx = c.getContext("2d"); ctx.scale(dpr, dpr);
+    const colors = ["#c5f02c", "#3b6bff", "#ff6b4a", "#ffd166", "#f472b6", "#22c1a5"];
+    const ps = [];
+    const burst = (x, y, dir) => {
+      for (let i = 0; i < count; i++) {
+        const a = (-90 + (Math.random() - 0.5) * 70 + dir * 25) * Math.PI / 180, sp = 8 + Math.random() * 9;
+        ps.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, s: 5 + Math.random() * 6, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, col: colors[i % colors.length] });
+      }
+    };
+    if (bursts === 1) burst(W / 2, H * 0.62, 0);
+    else { burst(W * 0.1, H * 0.75, 1); burst(W * 0.9, H * 0.75, -1); setTimeout(() => { burst(W * 0.5, H * 0.7, 0); }, 500); }
+    let frames = 0;
+    const tick = () => {
+      frames++;
+      ctx.clearRect(0, 0, W, H);
+      let alive = 0;
+      for (const p of ps) {
+        p.vy += 0.38; p.vx *= 0.992; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+        if (p.y < H + 20) alive++;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.col; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore();
+      }
+      if ((alive > 0 || frames < 40) && frames < 420) requestAnimationFrame(tick); else c.remove();
+    };
+    requestAnimationFrame(tick);
+  } catch (e) {}
+}
+function celebrate(big) {
+  confetti(big ? 90 : 32, big ? 3 : 1);
+  try { navigator.vibrate && navigator.vibrate(big ? [80, 60, 80, 60, 220] : [40]); } catch (e) {}
+}
+function badgeSvg(d, earned, size) {
+  size = size || 72;
   const fill = earned ? "var(--lime)" : "var(--card)", stroke = earned ? "var(--ink)" : "var(--line)", txt = earned ? "var(--onlime)" : "var(--muted)";
-  return `<svg viewBox="0 0 80 80" width="72" height="72" role="img" aria-label="${d} day badge"><polygon points="40,4 72,22 72,58 40,76 8,58 8,22" style="fill:${fill};stroke:${stroke};stroke-width:3;stroke-linejoin:round"/><text x="40" y="47" text-anchor="middle" font-size="${d >= 100 ? 24 : 28}" font-weight="800" style="fill:${txt};font-family:inherit">${d}</text></svg>`;
+  return `<svg viewBox="0 0 80 80" width="${size}" height="${size}" role="img" aria-label="${d} day badge"><polygon points="40,4 72,22 72,58 40,76 8,58 8,22" style="fill:${fill};stroke:${stroke};stroke-width:3;stroke-linejoin:round"/><text x="40" y="47" text-anchor="middle" font-size="${d >= 100 ? 24 : 28}" font-weight="800" style="fill:${txt};font-family:inherit">${d}</text></svg>`;
 }
 
 const iso = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
@@ -360,10 +402,10 @@ function finished() {
   const today = iso(new Date());
   const fb = S.feedback[today];
   const cal = S.cals[today];
-  return `<div style="margin-top:40px;text-align:center"><span class="chip" style="font-size:22px;padding:10px 18px">&#128293; ${liveStreak()}</span></div>
+  return `<div style="margin-top:40px;text-align:center"><span class="chip pop" style="font-size:22px;padding:10px 18px">&#128293; ${liveStreak()}</span></div>
     <h1 style="text-align:center">Nice work, ${NAME}</h1>
     <div class="sub" style="text-align:center">Streak extended${cal ? " &middot; about " + cal + " extra calories burned" : ""}</div>
-    ${newly.map(m => `<div class="card" style="text-align:center;border-color:var(--lime);border-width:2px">${badgeSvg(m.d, true)}<div style="margin-top:6px"><b>New badge: ${m.name}</b></div><div class="cap">${m.d} day streak</div></div>`).join("")}
+    ${newly.map(m => `<div class="card" style="text-align:center;border-color:var(--lime);border-width:2px;padding:22px 16px"><div class="pop">${badgeSvg(m.d, true, 120)}</div><div style="margin-top:10px;font-size:20px;color:var(--ink)"><b>${m.name}</b></div><div class="cap">${m.d} day streak. New badge unlocked.</div></div>`).join("")}
     ${w.kind === "strength" ? `<div class="card"><div style="margin-bottom:10px"><b>How did it feel?</b></div>
       <div class="row"><button class="btn small ${fb === "easy" ? "sel" : ""}" data-fb="easy">Easy</button><button class="btn small ${fb === "right" ? "sel" : ""}" data-fb="right">Just right</button><button class="btn small ${fb === "hard" ? "sel" : ""}" data-fb="hard">Hard</button></div></div>` : ""}
     <button class="btn" id="home">Back home</button>`;
@@ -387,6 +429,7 @@ function complete() {
   newly = MILESTONES.filter(m => n >= m.d && !S.badges[m.d]);
   newly.forEach(m => { S.badges[m.d] = today; });
   save(); view = "finished"; render();
+  celebrate(newly.length > 0);
 }
 
 function setWeight(kg) {
