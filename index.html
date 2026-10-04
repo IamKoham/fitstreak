@@ -294,7 +294,7 @@ function cal() {
     const mark = S.done[s] ? "&#10003;" : S.frozen[s] ? "&#10052;" : "";
     cells += `<button class="${cls}" data-day="${s}"><b>${n}</b><span>${shortLabel(w)}</span><span>${mark}</span></button>`;
   }
-  const sel = calState.sel, sd = parse(sel), sw = workoutFor(sd);
+  const sel = calState.sel, sd = parse(sel), sw = sel >= todayStr ? sessionFor(sd) : workoutFor(sd);
   let status = sel < S.start ? "Before you started" : S.done[sel] ? "Done" : S.frozen[sel] ? "Missed, a freeze saved your streak" : sel < todayStr ? "Missed" : sel === todayStr ? "Today" : "Planned";
   if (isTravel(sel)) status += " &middot; travel day";
   const moves = sw.kind === "strength"
@@ -306,12 +306,43 @@ function cal() {
       <div class="t">${sw.name}, ${sw.mins} min</div>${moves}</div>`;
 }
 
-function tipText() {
-  const dates = Object.keys(S.feedback).sort();
-  const last2 = dates.slice(-2).map(d => S.feedback[d]);
-  if (last2.length === 2 && last2.every(f => f === "easy")) return "Your last two strength sessions felt easy. Time to make them harder: lower slowly (3 seconds), pause at the bottom, or use single-leg versions. Each exercise lists a tip.";
-  if (last2.length === 2 && last2.every(f => f === "hard")) return "Your last two strength sessions felt hard. Go easy on yourself." + (S.strengthDays === 2 ? " Take the rest between sets slowly and use the easier version of each move." : " In Stats you can switch to 2 strength days a week.");
-  return "";
+// Plan level, worked out by replaying every strength feedback in order.
+// -1 lighter (2 sets, 60 sec rest, 20 min), 0 standard, 1 harder versions of each move.
+const LEVELS = { "-1": { name: "Lighter", desc: "2 sets per move, 60 seconds rest" }, "0": { name: "Standard", desc: "3 sets per move, 45 seconds rest" }, "1": { name: "Harder versions", desc: "3 sets, each move done its harder way" } };
+function planState() {
+  let level = 0, run = [], since = null, offer = null, maxed = null;
+  for (const d of Object.keys(S.feedback || {}).sort()) {
+    run.push(S.feedback[d]);
+    const two = run.slice(-2), both = f => two.length === 2 && two.every(f);
+    const hard = both(f => f === "hard"), easy = both(f => f === "easy"), fine = both(f => f !== "hard");
+    if (level === 0 && hard) { level = -1; since = d; run = []; }
+    else if (level === 0 && easy) { level = 1; since = d; run = []; }
+    else if (level === -1 && fine) { level = 0; since = d; run = []; }
+    else if (level === -1 && hard) { offer = d; run = []; }
+    else if (level === 1 && hard) { level = 0; since = d; run = []; }
+    else if (level === 1 && easy) { maxed = d; run = []; }
+  }
+  return { level, since, offer, maxed };
+}
+function applyLevel(w, level) {
+  if (w.kind !== "strength" || !level) return w;
+  if (level < 0) return Object.assign({}, w, { mins: 20, exercises: w.exercises.map(e => e.sets > 1 ? Object.assign({}, e, { sets: 2, rest: 60 }) : e) });
+  return Object.assign({}, w, { exercises: w.exercises.map(e => e.harder ? Object.assign({}, e, { focus: e.harder }) : e) });
+}
+function sessionFor(date) { return applyLevel(workoutFor(date), planState().level); }
+function planNotice(todayStr) {
+  const p = planState();
+  if (p.offer && S.daysAnswered !== p.offer && S.strengthDays === 3)
+    return `<div class="notice"><b>Still feeling hard?</b> Two more hard sessions on the lighter plan. Want to drop to 2 strength days a week (Tue and Fri)? Walks fill the other days, so your streak is safe.
+      <div class="row" style="margin-top:10px;justify-content:flex-start"><button class="btn small" data-days="2">Switch to 2 days</button><button class="btn small" data-days="3">Keep 3 days</button></div></div>`;
+  if (p.offer && S.strengthDays === 2 && daysBetween(p.offer, todayStr) <= 3)
+    return `<div class="notice">Still hard on 2 days a week. Rest as long as you need between sets, and use the knee or chair-assisted version of any move. It gets easier.</div>`;
+  if (p.maxed && p.level === 1 && daysBetween(p.maxed, todayStr) <= 3)
+    return `<div class="notice">The harder versions feel easy now. Great progress. Next step: lower every rep over 4 seconds, or think about heavier dumbbells for squats and deadlifts.</div>`;
+  if (!p.since || daysBetween(p.since, todayStr) > 3) return "";
+  if (p.level === -1) return `<div class="notice"><b>Plan eased.</b> Your last two strength sessions felt hard, so they're now 2 sets per move with 60 seconds rest. Two sessions that feel fine bring back 3 sets.</div>`;
+  if (p.level === 1) return `<div class="notice"><b>Level up.</b> Your last two sessions felt easy, so each move now shows its harder version. Two hard sessions take you back to standard.</div>`;
+  return `<div class="notice"><b>Back to standard.</b> ${S.feedback[p.since] === "hard" ? "The harder versions felt tough, so you're back to the normal moves." : "Your sessions feel good again, so you're back to 3 sets."}</div>`;
 }
 
 function nextBadgeCard(n) {
@@ -336,7 +367,7 @@ function badges() {
 
 function home() {
   const today = new Date(), todayStr = iso(today);
-  const w = workoutFor(today);
+  const w = sessionFor(today), lvl = planState().level;
   const dow = today.getDay(), monday = addDays(today, -((dow + 6) % 7));
   const names = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
   let cells = "";
@@ -349,9 +380,9 @@ function home() {
     cells += `<div class="d"><div class="dn">${names[d.getDay()]}</div><div class="${cls}">${inner}</div><div class="dot ${dw.kind === "strength" ? "s" : "w"}"></div></div>`;
   }
   const doneToday = !!S.done[todayStr];
-  const moves = w.kind === "strength" ? w.exercises.filter(e => e.id !== "warmup" && e.id !== "cooldown").map(e => e.name).join(", ") + ", then a stretch" : "Easy pace. Stretch for 2 minutes after.";
+  const moves = w.kind === "strength" ? w.exercises.filter(e => e.id !== "warmup" && e.id !== "cooldown").map(e => e.name).join(", ") + ", then a stretch" + (lvl ? `<div class="cap" style="margin-top:4px">${LEVELS[lvl].name} plan: ${LEVELS[lvl].desc}</div>` : "") : "Easy pace. Stretch for 2 minutes after.";
   const cal = calories(w);
-  const tip = tipText();
+  const tip = planNotice(todayStr);
   const n = liveStreak();
   const line = n === 0 ? "Finish today's goal to start your streak." : n === 1 ? "You have a 1 day streak going." : `You have a ${n} day streak going.`;
   return `
@@ -364,7 +395,7 @@ function home() {
       <div class="t">${w.name}</div>
       <div class="m">${moves}</div>
       <div class="m" style="margin-top:10px;font-size:13px">${cal ? `About ${cal} extra calories burned if you finish` : "Log your weight in Stats to see calories"}</div></div>
-    ${tip ? `<div class="notice">${tip}</div>` : ""}
+    ${tip}
     ${nextBadgeCard(n)}
     ${doneToday ? `<div class="card" style="text-align:center"><b>Done for today.</b> See you tomorrow.</div>` : `<button class="btn" id="start">&#9654;&#xFE0E; Start ${w.kind === "strength" ? "workout" : "walk"}</button>`}
     ${travelBox(todayStr)}
@@ -403,7 +434,7 @@ function workout() {
     <div class="vid">${embed ? `<iframe src="${embed}" allowfullscreen></iframe>` : "No video yet"}</div>
     <div class="row"><input type="text" id="vurl" placeholder="Swap video: paste a YouTube link" value="${esc(S.videos[ex.id] || "")}"><button class="btn small" id="vsave">Save</button></div>
     <ol class="steps">${ex.steps.map(s => `<li>${s}</li>`).join("")}</ol>
-    ${ex.harder ? `<div class="cap">Too easy? ${ex.harder}.</div>` : ""}
+    ${ex.focus ? `<div class="notice"><b>Harder version:</b> ${ex.focus}.</div>` : ex.harder ? `<div class="cap">Too easy? ${ex.harder}.</div>` : ""}
     <button class="btn" id="setdone" style="margin-bottom:16px">${label}</button>`;
 }
 
@@ -412,12 +443,17 @@ function finished() {
   const today = ws.day;
   const fb = S.feedback[today];
   const cal = S.cals[today];
+  const p = planState();
+  const fbNote = !fb ? "Your answer tunes the next sessions."
+    : p.since === today ? `Next sessions: ${LEVELS[p.level].name.toLowerCase()} plan, ${LEVELS[p.level].desc}.`
+    : p.offer === today && S.strengthDays === 3 ? "Home will ask if you want to drop to 2 strength days."
+    : "Thanks. Two in a row of the same answer adjusts the plan.";
   return `<div style="margin-top:40px;text-align:center"><span class="chip pop" style="font-size:22px;padding:10px 18px">&#128293; ${liveStreak()}</span></div>
     <h1 style="text-align:center">Nice work, ${NAME}</h1>
     <div class="sub" style="text-align:center">Streak extended${cal ? " &middot; about " + cal + " extra calories burned" : ""}</div>
     ${newly.map(m => `<div class="card" style="text-align:center;border-color:var(--lime);border-width:2px;padding:22px 16px"><div class="pop">${badgeSvg(m.d, true, 120)}</div><div style="margin-top:10px;font-size:20px;color:var(--ink)"><b>${m.name}</b></div><div class="cap">${m.d} day streak. New badge unlocked.</div></div>`).join("")}
     ${w.kind === "strength" ? `<div class="card"><div style="margin-bottom:10px"><b>How did it feel?</b></div>
-      <div class="row"><button class="btn small ${fb === "easy" ? "sel" : ""}" data-fb="easy">Easy</button><button class="btn small ${fb === "right" ? "sel" : ""}" data-fb="right">Just right</button><button class="btn small ${fb === "hard" ? "sel" : ""}" data-fb="hard">Hard</button></div></div>` : ""}
+      <div class="row"><button class="btn small ${fb === "easy" ? "sel" : ""}" data-fb="easy">Easy</button><button class="btn small ${fb === "right" ? "sel" : ""}" data-fb="right">Just right</button><button class="btn small ${fb === "hard" ? "sel" : ""}" data-fb="hard">Hard</button></div><div class="cap" style="margin-top:10px">${fbNote}</div></div>` : ""}
     <button class="btn" id="home">Back home</button>`;
 }
 
@@ -544,6 +580,7 @@ function stats() {
       <div id="terr" class="cap" style="color:var(--err)"></div>
       ${(S.trips || []).filter(t => t.to >= iso(new Date())).sort((a, b) => a.from.localeCompare(b.from)).map(t => `<div class="row" style="margin-top:8px"><span>${fmt(t.from)} to ${fmt(t.to)}</span><button class="btn small" data-rm="${t.from}|${t.to}">Remove</button></div>`).join("")}</div>
     <div class="card row"><span style="white-space:nowrap">Walk speed<div class="cap">for calories</div></span><select id="pace">${Object.keys(PACES).map(k => `<option value="${k}" ${(S.pace || "moderate") === k ? "selected" : ""}>${PACES[k].label}</option>`).join("")}</select></div>
+    <div class="card"><div class="row"><b>Plan level</b><span class="chip ghost">${LEVELS[planState().level].name}</span></div><div style="margin-top:6px">${LEVELS[planState().level].desc}. After each strength session, tap how it felt. Two Hard in a row eases the plan, two Easy makes it harder. Strength days only change if you say yes.</div></div>
     <div class="card row"><span>Strength days a week</span><select id="sdays"><option value="3" ${S.strengthDays === 3 ? "selected" : ""}>3 (Mon, Wed, Fri)</option><option value="2" ${S.strengthDays === 2 ? "selected" : ""}>2 (Tue, Fri)</option></select></div>
     <div class="cap" style="padding-bottom:8px">Calories are the extra burn from the workout itself, on top of what your body burns at rest anyway. They're estimates from your weight, pace and time, and your actual burn can differ by 20% or more.</div>
     <div class="card"><div class="row"><b>Your data</b><span class="cap">${S.lastBackup ? "last backup " + fmt(S.lastBackup) : "never backed up"}</span></div>
@@ -572,7 +609,7 @@ function validBackup(d) {
 function bind() {
   const $ = id => document.getElementById(id);
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
-  on("start", () => { const d = new Date(); ws = { i: 0, set: 1, rest: 0, total: 0, end: 0, t: null, day: iso(d), w: workoutFor(d) }; view = "workout"; render(); });
+  on("start", () => { const d = new Date(); ws = { i: 0, set: 1, rest: 0, total: 0, end: 0, t: null, day: iso(d), w: sessionFor(d) }; view = "workout"; render(); });
   on("back", () => { clearTimer(); view = "home"; render(); });
   on("home", () => { newly = []; view = "home"; render(); });
   document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { view = b.dataset.go; render(); });
@@ -591,6 +628,7 @@ function bind() {
     if (v) S.videos[ex.id] = v; else delete S.videos[ex.id];
     save(); render();
   });
+  document.querySelectorAll("[data-days]").forEach(b => b.onclick = () => { S.daysAnswered = planState().offer; S.strengthDays = parseInt(b.dataset.days, 10); save(); render(); });
   document.querySelectorAll("[data-fb]").forEach(b => b.onclick = () => { S.feedback[ws.day] = b.dataset.fb; save(); render(); });
   document.querySelectorAll("[data-range]").forEach(b => b.onclick = () => { range = parseInt(b.dataset.range, 10); render(); });
   on("tsave", () => {
